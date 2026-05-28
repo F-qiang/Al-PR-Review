@@ -5,11 +5,12 @@ from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from typing import Any
 
+from app.config import settings
 from app.database import SessionLocal, get_task, update_task
 from app.schemas import PullRequestInfo, ReviewResult, ReviewTaskResponse
 from app.services.event_bus import event_bus
 from app.services.github import GitHubError, fetch_pr_files, fetch_pull_request, file_diffs_to_dict
-from app.services.llm import LLMError, analyze_with_llm
+from app.services.llm import LLMError, analyze_with_llm, split_files_into_chunks, total_patch_chars
 from app.services.pr_parser import parse_pr_url
 from app.services.rules import merge_risks, scan_file_with_rules
 
@@ -32,7 +33,15 @@ def send(task_id: str, event: str, data: dict[str, Any]) -> None:
     event_bus.emit(task_id, event, data)
 
 
-async def run_review_analysis(task_id: str, pr_url: str, github_token: str | None = None) -> None:
+def _resolve_github_token(task_token: str | None, override: str | None = None) -> str | None:
+    return override or task_token or settings.github_token or None
+
+
+async def run_review_analysis(
+    task_id: str,
+    pr_url: str,
+    github_token: str | None = None,
+) -> None:
     if not event_bus.mark_running(task_id):
         return
 
@@ -44,13 +53,15 @@ async def run_review_analysis(task_id: str, pr_url: str, github_token: str | Non
             if not task:
                 return
 
+            effective_token = _resolve_github_token(task.github_token, github_token)
+
             send(task_id, "status", {"stage": "parsing", "message": "正在解析 PR 地址..."})
             parsed = parse_pr_url(pr_url)
 
             send(task_id, "status", {"stage": "fetching", "message": "正在从 GitHub 拉取 PR 数据..."})
             await update_task(session, task, status="fetching")
-            pr_info = await fetch_pull_request(parsed, github_token)
-            files = await fetch_pr_files(parsed, github_token)
+            pr_info = await fetch_pull_request(parsed, effective_token)
+            files = await fetch_pr_files(parsed, effective_token)
 
             await update_task(
                 session,
@@ -60,13 +71,34 @@ async def run_review_analysis(task_id: str, pr_url: str, github_token: str | Non
                 pr_payload=pr_info.model_dump(),
                 status="analyzing",
             )
+
+            file_dicts = file_diffs_to_dict(files)
+            patch_chars = total_patch_chars(file_dicts)
+            chunk_count = len(split_files_into_chunks(file_dicts)) if patch_chars > 48000 else 1
+
             send(
                 task_id,
                 "status",
                 {
                     "stage": "analyzing",
-                    "message": f"已获取 {len(files)} 个变更文件，开始分析...",
+                    "message": f"已获取 {len(files)} 个变更文件，{'分 ' + str(chunk_count) + ' 批' if chunk_count > 1 else '开始'}分析...",
                     "files_count": len(files),
+                    "chunk_count": chunk_count,
+                },
+            )
+            send(
+                task_id,
+                "pr_info",
+                {
+                    "title": pr_info.title,
+                    "author": pr_info.author,
+                    "url": pr_info.url,
+                    "owner": pr_info.owner,
+                    "repo": pr_info.repo,
+                    "number": pr_info.number,
+                    "additions": pr_info.additions,
+                    "deletions": pr_info.deletions,
+                    "changed_files": pr_info.changed_files,
                 },
             )
 
@@ -74,12 +106,15 @@ async def run_review_analysis(task_id: str, pr_url: str, github_token: str | Non
             for file in files:
                 rule_risks.extend(scan_file_with_rules(file.filename, file.patch))
 
-            send(task_id, "status", {"stage": "llm", "message": "正在进行 AI 智能分析..."})
-            llm_result = await analyze_with_llm(
-                pr_info.title,
-                pr_info.body,
-                file_diffs_to_dict(files),
+            send(
+                task_id,
+                "status",
+                {
+                    "stage": "llm",
+                    "message": "正在进行 AI 智能分析..." if chunk_count == 1 else f"正在并行分析 {chunk_count} 批变更...",
+                },
             )
+            llm_result = await analyze_with_llm(pr_info.title, pr_info.body, file_dicts)
 
             llm_result.risks = merge_risks(rule_risks, llm_result.risks)
             llm_result.duration_ms = int((time.perf_counter() - started) * 1000)
@@ -105,6 +140,7 @@ async def run_review_analysis(task_id: str, pr_url: str, github_token: str | Non
                     "duration_ms": llm_result.duration_ms,
                     "risk_count": len(llm_result.risks),
                     "suggestion_count": len(llm_result.suggestions),
+                    "chunk_count": chunk_count,
                 },
             )
     except (GitHubError, LLMError, ValueError) as exc:
@@ -144,6 +180,11 @@ async def stream_events(task_id: str) -> AsyncIterator[dict[str, str]]:
 
         if task.status == "completed" and task.result_payload:
             result = ReviewResult(**task.result_payload)
+            if task.pr_payload:
+                yield {
+                    "event": "pr_info",
+                    "data": json.dumps(task.pr_payload, ensure_ascii=False),
+                }
             yield {
                 "event": "summary",
                 "data": json.dumps({"content": result.summary}, ensure_ascii=False),
@@ -157,7 +198,14 @@ async def stream_events(task_id: str) -> AsyncIterator[dict[str, str]]:
                 }
             yield {
                 "event": "done",
-                "data": json.dumps({"task_id": task_id, "cached": True}, ensure_ascii=False),
+                "data": json.dumps(
+                    {
+                        "task_id": task_id,
+                        "cached": True,
+                        "duration_ms": result.duration_ms,
+                    },
+                    ensure_ascii=False,
+                ),
             }
             return
 
@@ -168,8 +216,11 @@ async def stream_events(task_id: str) -> AsyncIterator[dict[str, str]]:
             }
             return
 
+        task_pr_url = task.pr_url
+        task_github_token = task.github_token
+
     queue = event_bus.get_queue(task_id)
-    worker = asyncio.create_task(run_review_analysis(task_id, task.pr_url, None))
+    worker = asyncio.create_task(run_review_analysis(task_id, task_pr_url, task_github_token))
 
     while True:
         item = await queue.get()

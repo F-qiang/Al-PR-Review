@@ -31,6 +31,7 @@ async def create_review(
         owner=parsed.owner,
         repo=parsed.repo,
         number=parsed.number,
+        github_token=body.github_token,
     )
 
     return task_to_response(task)

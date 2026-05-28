@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, select
+from sqlalchemy import JSON, DateTime, Integer, String, Text, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -25,6 +25,7 @@ class ReviewTaskModel(Base):
     pr_author: Mapped[str | None] = mapped_column(String(128))
     status: Mapped[str] = mapped_column(String(32), default="pending")
     error_message: Mapped[str | None] = mapped_column(Text)
+    github_token: Mapped[str | None] = mapped_column(Text)
     pr_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     result_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -38,6 +39,14 @@ SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await _migrate_schema(conn)
+
+
+async def _migrate_schema(conn) -> None:
+    result = await conn.execute(text("PRAGMA table_info(review_tasks)"))
+    columns = {row[1] for row in result.fetchall()}
+    if "github_token" not in columns:
+        await conn.execute(text("ALTER TABLE review_tasks ADD COLUMN github_token TEXT"))
 
 
 async def create_task(
@@ -47,6 +56,7 @@ async def create_task(
     owner: str,
     repo: str,
     number: int,
+    github_token: str | None = None,
 ) -> ReviewTaskModel:
     task = ReviewTaskModel(
         id=str(uuid.uuid4()),
@@ -54,6 +64,7 @@ async def create_task(
         repo_owner=owner,
         repo_name=repo,
         pr_number=number,
+        github_token=github_token,
         status="pending",
     )
     session.add(task)
