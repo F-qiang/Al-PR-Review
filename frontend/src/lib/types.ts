@@ -69,6 +69,7 @@ export interface DoneEvent {
   risk_count?: number;
   suggestion_count?: number;
   report_url?: string | null;
+  comment_url?: string | null;
   chunk_count?: number;
   cached?: boolean;
 }

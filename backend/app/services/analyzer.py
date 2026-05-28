@@ -9,11 +9,11 @@ from app.config import settings
 from app.database import SessionLocal, get_task, update_task
 from app.schemas import PullRequestInfo, ReviewResult, ReviewTaskResponse
 from app.services.event_bus import event_bus
-from app.services.github import GitHubError, fetch_pr_files, fetch_pull_request, file_diffs_to_dict
+from app.services.github import GitHubError, fetch_pr_files, fetch_pull_request, file_diffs_to_dict, post_pr_comment
 from app.services.llm import LLMError, analyze_with_llm, split_files_into_chunks, total_patch_chars
 from app.services.pr_parser import parse_pr_url
 from app.services.qiniu_storage import QiniuStorageError, is_qiniu_configured, upload_report
-from app.services.report import render_markdown_report
+from app.services.report import render_markdown_report, render_pr_comment
 from app.services.rules import merge_risks, scan_file_with_rules
 
 
@@ -153,6 +153,15 @@ async def run_review_analysis(
             except QiniuStorageError as exc:
                 send(task_id, "status", {"stage": "upload", "message": f"报告上传跳过：{exc}"})
 
+            comment_url = None
+            if settings.github_auto_comment and effective_token:
+                try:
+                    send(task_id, "status", {"stage": "comment", "message": "正在发布 PR 评论..."})
+                    comment_body = render_pr_comment(pr_info, llm_result, report_url=report_url)
+                    comment_url = await post_pr_comment(parsed, comment_body, effective_token)
+                except GitHubError as exc:
+                    send(task_id, "status", {"stage": "comment", "message": f"PR 评论跳过：{exc}"})
+
             await update_task(
                 session,
                 task,
@@ -170,6 +179,7 @@ async def run_review_analysis(
                     "risk_count": len(llm_result.risks),
                     "suggestion_count": len(llm_result.suggestions),
                     "report_url": report_url,
+                    "comment_url": comment_url,
                     "chunk_count": chunk_count,
                 },
             )

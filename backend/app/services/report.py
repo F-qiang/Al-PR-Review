@@ -2,6 +2,9 @@ from datetime import datetime
 
 from app.schemas import PullRequestInfo, ReviewResult
 
+MAX_COMMENT_RISKS = 5
+MAX_COMMENT_SUGGESTIONS = 3
+
 
 def render_markdown_report(
     pr: PullRequestInfo,
@@ -54,4 +57,50 @@ def render_markdown_report(
             lines.append(f"{index}. **[{item.category}]** ({item.priority}) {item.content}")
 
     lines.append("")
+    return "\n".join(lines)
+
+
+def render_pr_comment(
+    pr: PullRequestInfo,
+    result: ReviewResult,
+    *,
+    report_url: str | None = None,
+) -> str:
+    """生成适合贴在 PR 下的精简评论。"""
+    lines = [
+        "## 🤖 AI PR Review",
+        "",
+        "### 变更摘要",
+        result.summary,
+        "",
+    ]
+
+    high_risks = [risk for risk in result.risks if risk.severity in {"critical", "high"}]
+    display_risks = high_risks[:MAX_COMMENT_RISKS] or result.risks[:MAX_COMMENT_RISKS]
+
+    lines.append("### 风险识别")
+    if not display_risks:
+        lines.append("未发现明显高风险项。")
+    else:
+        for risk in display_risks:
+            location = f"`{risk.file}`" + (f":{risk.line}" if risk.line else "")
+            lines.append(f"- **[{risk.severity}]** {location} — {risk.description}")
+
+    lines.extend(["", "### Review 建议"])
+    if not result.suggestions:
+        lines.append("暂无额外建议。")
+    else:
+        for item in result.suggestions[:MAX_COMMENT_SUGGESTIONS]:
+            lines.append(f"- **[{item.category}]** {item.content}")
+
+    if report_url:
+        lines.extend(["", f"📄 [查看完整报告]({report_url})"])
+
+    lines.extend(
+        [
+            "",
+            "---",
+            f"*由 {result.model_name} 自动生成 · {pr.owner}/{pr.repo}#{pr.number}*",
+        ]
+    )
     return "\n".join(lines)

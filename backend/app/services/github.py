@@ -85,3 +85,25 @@ async def fetch_pr_files(parsed: ParsedPR, token: str | None = None) -> list[Fil
 
 def file_diffs_to_dict(files: list[FileDiff]) -> list[dict[str, Any]]:
     return [file.model_dump() for file in files]
+
+
+async def post_pr_comment(
+    parsed: ParsedPR,
+    body: str,
+    token: str | None = None,
+) -> str:
+    effective_token = token or settings.github_token
+    if not effective_token:
+        raise GitHubError("未配置 GitHub Token，无法发布 PR 评论")
+
+    url = f"https://api.github.com/repos/{parsed.owner}/{parsed.repo}/issues/{parsed.number}/comments"
+    headers = build_headers(effective_token)
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(url, headers=headers, json={"body": body})
+        if response.status_code == 403:
+            raise GitHubError("GitHub Token 权限不足，需要 repo 或 pull_requests 写权限")
+        response.raise_for_status()
+        data = response.json()
+
+    return data.get("html_url", "")

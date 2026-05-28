@@ -52,6 +52,7 @@ npm run dev
 | `LLM_MODEL` | 模型名称 |
 | `GITHUB_TOKEN` | GitHub Token（可选，私有仓库/API 限额） |
 | `GITHUB_WEBHOOK_SECRET` | Webhook 签名密钥（可选） |
+| `GITHUB_AUTO_COMMENT` | 分析完成后自动回评 PR，默认 `true` |
 | `QINIU_ACCESS_KEY` | 七牛云 Access Key（可选） |
 | `QINIU_SECRET_KEY` | 七牛云 Secret Key（可选） |
 | `QINIU_BUCKET` | 七牛云存储空间名称（可选） |

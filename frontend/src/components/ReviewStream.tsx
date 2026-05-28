@@ -93,6 +93,16 @@ export function ReviewStream({ taskId }: { taskId: string }) {
               七牛云报告链接
             </a>
           ) : null}
+          {doneMeta?.comment_url ? (
+            <a
+              href={doneMeta.comment_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            >
+              查看 PR 评论
+            </a>
+          ) : null}
           {!done && !error ? (
             <span className="inline-flex items-center gap-2 text-sm text-slate-500">
               <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
