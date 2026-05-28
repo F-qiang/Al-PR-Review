@@ -51,6 +51,7 @@ npm run dev
 | `LLM_BASE_URL` | OpenAI 兼容接口地址，默认 DeepSeek |
 | `LLM_MODEL` | 模型名称 |
 | `GITHUB_TOKEN` | GitHub Token（可选，私有仓库/API 限额） |
+| `GITHUB_WEBHOOK_SECRET` | Webhook 签名密钥（可选） |
 | `QINIU_ACCESS_KEY` | 七牛云 Access Key（可选） |
 | `QINIU_SECRET_KEY` | 七牛云 Secret Key（可选） |
 | `QINIU_BUCKET` | 七牛云存储空间名称（可选） |
@@ -71,7 +72,16 @@ npm run dev
 - [x] 大 PR 分块并行分析
 - [x] Markdown 报告导出
 - [x] 七牛云 OSS 报告存储（可选，配置 QINIU_* 后启用）
-- [ ] GitHub App Webhook 自动 Review
+- [x] GitHub Webhook 自动 Review
+
+## GitHub Webhook 配置
+
+1. 仓库 Settings → Webhooks → Add webhook
+2. Payload URL：`https://你的域名/api/v1/webhooks/github`
+3. Content type：`application/json`
+4. Secret：与 `GITHUB_WEBHOOK_SECRET` 保持一致
+5. 事件：勾选 **Pull requests**
+6. PR 打开或更新时会自动创建分析任务
 
 ## 技术栈
 

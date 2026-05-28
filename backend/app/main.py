@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.reviews import router as reviews_router
+from app.api.routes.webhooks import router as webhooks_router
 from app.config import settings
 from app.database import init_db
 
@@ -30,6 +31,7 @@ app.add_middleware(
 )
 
 app.include_router(reviews_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/api/v1/health")
