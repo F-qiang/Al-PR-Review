@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getStreamUrl } from "@/lib/api";
-import type { RiskItem, StatusEvent, SuggestionItem } from "@/lib/types";
+import { getReportDownloadUrl, getStreamUrl } from "@/lib/api";
+import type { DoneEvent, PullRequestInfo, RiskItem, StatusEvent, SuggestionItem } from "@/lib/types";
 
 const severityStyle: Record<string, string> = {
   critical: "bg-red-100 text-red-700 border-red-200",
@@ -17,9 +17,11 @@ export function ReviewStream({ taskId }: { taskId: string }) {
     stage: "pending",
     message: "连接分析服务...",
   });
+  const [prInfo, setPrInfo] = useState<PullRequestInfo | null>(null);
   const [summary, setSummary] = useState("");
   const [risks, setRisks] = useState<RiskItem[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [doneMeta, setDoneMeta] = useState<DoneEvent | null>(null);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +30,10 @@ export function ReviewStream({ taskId }: { taskId: string }) {
 
     source.addEventListener("status", (event) => {
       setStatus(JSON.parse(event.data) as StatusEvent);
+    });
+
+    source.addEventListener("pr_info", (event) => {
+      setPrInfo(JSON.parse(event.data) as PullRequestInfo);
     });
 
     source.addEventListener("summary", (event) => {
@@ -43,7 +49,8 @@ export function ReviewStream({ taskId }: { taskId: string }) {
       setSuggestions((prev) => [...prev, JSON.parse(event.data) as SuggestionItem]);
     });
 
-    source.addEventListener("done", () => {
+    source.addEventListener("done", (event) => {
+      setDoneMeta(JSON.parse(event.data) as DoneEvent);
       setDone(true);
       source.close();
     });
@@ -63,16 +70,26 @@ export function ReviewStream({ taskId }: { taskId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <Link href="/" className="text-sm text-indigo-600 hover:text-indigo-500">
           ← 返回首页
         </Link>
-        {!done && !error ? (
-          <span className="inline-flex items-center gap-2 text-sm text-slate-500">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
-            {status?.message ?? "分析中..."}
-          </span>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-3">
+          {done ? (
+            <a
+              href={getReportDownloadUrl(taskId)}
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
+            >
+              下载 Markdown 报告
+            </a>
+          ) : null}
+          {!done && !error ? (
+            <span className="inline-flex items-center gap-2 text-sm text-slate-500">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
+              {status?.message ?? "分析中..."}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {error ? (
@@ -81,10 +98,34 @@ export function ReviewStream({ taskId }: { taskId: string }) {
         </div>
       ) : null}
 
+      {prInfo ? (
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm text-slate-500">
+                {prInfo.owner}/{prInfo.repo} #{prInfo.number}
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-900">{prInfo.title}</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                作者 {prInfo.author} · +{prInfo.additions} / -{prInfo.deletions} · {prInfo.changed_files} 个文件
+              </p>
+            </div>
+            <a
+              href={prInfo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              在 GitHub 查看 →
+            </a>
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">变更摘要</h2>
         {summary ? (
-          <p className="leading-7 text-slate-700">{summary}</p>
+          <p className="leading-7 whitespace-pre-wrap text-slate-700">{summary}</p>
         ) : (
           <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
         )}
@@ -154,6 +195,14 @@ export function ReviewStream({ taskId }: { taskId: string }) {
           </ul>
         )}
       </section>
+
+      {done && doneMeta ? (
+        <p className="text-center text-xs text-slate-400">
+          分析完成
+          {doneMeta.duration_ms ? ` · 耗时 ${(doneMeta.duration_ms / 1000).toFixed(1)}s` : ""}
+          {doneMeta.chunk_count && doneMeta.chunk_count > 1 ? ` · 分 ${doneMeta.chunk_count} 批并行分析` : ""}
+        </p>
+      ) : null}
     </div>
   );
 }

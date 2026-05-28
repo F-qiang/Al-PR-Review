@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import SessionLocal, create_task, get_task, list_tasks
-from app.schemas import CreateReviewRequest, ReviewListItem, ReviewListResponse, ReviewTaskResponse
+from app.schemas import CreateReviewRequest, PullRequestInfo, ReviewListItem, ReviewListResponse, ReviewResult, ReviewTaskResponse
 from app.services.analyzer import stream_events, task_to_response
 from app.services.pr_parser import parse_pr_url
+from app.services.report import render_markdown_report
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
@@ -60,6 +62,25 @@ async def get_review(task_id: str, session: AsyncSession = Depends(get_session))
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
     return task_to_response(task)
+
+
+@router.get("/{task_id}/report.md", response_class=PlainTextResponse)
+async def download_report(task_id: str, session: AsyncSession = Depends(get_session)) -> PlainTextResponse:
+    task = await get_task(session, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if not task.result_payload or not task.pr_payload:
+        raise HTTPException(status_code=404, detail="报告尚未生成")
+
+    markdown = render_markdown_report(
+        PullRequestInfo(**task.pr_payload),
+        ReviewResult(**task.result_payload),
+        task_id=task.id,
+        created_at=task.created_at,
+    )
+    filename = f"pr-review-{task.repo_owner}-{task.repo_name}-{task.pr_number}.md"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return PlainTextResponse(markdown, media_type="text/markdown; charset=utf-8", headers=headers)
 
 
 @router.get("/{task_id}/stream")

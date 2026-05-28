@@ -4,7 +4,7 @@ export interface PullRequestInfo {
   number: number;
   title: string;
   author: string;
-  body: string;
+  body?: string;
   url: string;
   additions: number;
   deletions: number;
@@ -42,6 +42,7 @@ export interface ReviewTask {
   pr: PullRequestInfo | null;
   result: ReviewResult | null;
   error_message: string | null;
+  report_url: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -59,4 +60,15 @@ export interface StatusEvent {
   stage: string;
   message: string;
   files_count?: number;
+  chunk_count?: number;
+}
+
+export interface DoneEvent {
+  task_id: string;
+  duration_ms?: number;
+  risk_count?: number;
+  suggestion_count?: number;
+  report_url?: string | null;
+  chunk_count?: number;
+  cached?: boolean;
 }

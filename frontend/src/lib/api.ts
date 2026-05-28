@@ -40,3 +40,7 @@ export async function listReviews(): Promise<{ items: ReviewListItem[]; total: n
 export function getStreamUrl(taskId: string): string {
   return `${API_BASE}/api/v1/reviews/${taskId}/stream`;
 }
+
+export function getReportDownloadUrl(taskId: string): string {
+  return `${API_BASE}/api/v1/reviews/${taskId}/report.md`;
+}
