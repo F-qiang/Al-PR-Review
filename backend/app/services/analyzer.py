@@ -12,6 +12,8 @@ from app.services.event_bus import event_bus
 from app.services.github import GitHubError, fetch_pr_files, fetch_pull_request, file_diffs_to_dict
 from app.services.llm import LLMError, analyze_with_llm, split_files_into_chunks, total_patch_chars
 from app.services.pr_parser import parse_pr_url
+from app.services.qiniu_storage import QiniuStorageError, is_qiniu_configured, upload_report
+from app.services.report import render_markdown_report
 from app.services.rules import merge_risks, scan_file_with_rules
 
 
@@ -24,6 +26,7 @@ def task_to_response(task) -> ReviewTaskResponse:
         pr=pr,
         result=result,
         error_message=task.error_message,
+        report_url=task.report_url,
         created_at=task.created_at,
         completed_at=task.completed_at,
     )
@@ -35,6 +38,20 @@ def send(task_id: str, event: str, data: dict[str, Any]) -> None:
 
 def _resolve_github_token(task_token: str | None, override: str | None = None) -> str | None:
     return override or task_token or settings.github_token or None
+
+
+async def _upload_report_if_configured(
+    task_id: str,
+    pr_info: PullRequestInfo,
+    result: ReviewResult,
+    created_at: datetime,
+) -> str | None:
+    if not is_qiniu_configured():
+        return None
+
+    markdown = render_markdown_report(pr_info, result, task_id=task_id, created_at=created_at)
+    object_key = f"reports/{pr_info.owner}/{pr_info.repo}/pr-{pr_info.number}-{task_id[:8]}.md"
+    return await upload_report(object_key, markdown)
 
 
 async def run_review_analysis(
@@ -125,11 +142,23 @@ async def run_review_analysis(
             for suggestion in llm_result.suggestions:
                 send(task_id, "suggestion", suggestion.model_dump())
 
+            report_url = None
+            try:
+                report_url = await _upload_report_if_configured(
+                    task_id,
+                    pr_info,
+                    llm_result,
+                    task.created_at,
+                )
+            except QiniuStorageError as exc:
+                send(task_id, "status", {"stage": "upload", "message": f"报告上传跳过：{exc}"})
+
             await update_task(
                 session,
                 task,
                 status="completed",
                 result_payload=llm_result.model_dump(),
+                report_url=report_url,
                 completed_at=datetime.now(timezone.utc),
             )
             send(
@@ -140,6 +169,7 @@ async def run_review_analysis(
                     "duration_ms": llm_result.duration_ms,
                     "risk_count": len(llm_result.risks),
                     "suggestion_count": len(llm_result.suggestions),
+                    "report_url": report_url,
                     "chunk_count": chunk_count,
                 },
             )
@@ -202,6 +232,7 @@ async def stream_events(task_id: str) -> AsyncIterator[dict[str, str]]:
                     {
                         "task_id": task_id,
                         "cached": True,
+                        "report_url": task.report_url,
                         "duration_ms": result.duration_ms,
                     },
                     ensure_ascii=False,

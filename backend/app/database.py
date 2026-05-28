@@ -26,6 +26,7 @@ class ReviewTaskModel(Base):
     status: Mapped[str] = mapped_column(String(32), default="pending")
     error_message: Mapped[str | None] = mapped_column(Text)
     github_token: Mapped[str | None] = mapped_column(Text)
+    report_url: Mapped[str | None] = mapped_column(Text)
     pr_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     result_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -47,6 +48,8 @@ async def _migrate_schema(conn) -> None:
     columns = {row[1] for row in result.fetchall()}
     if "github_token" not in columns:
         await conn.execute(text("ALTER TABLE review_tasks ADD COLUMN github_token TEXT"))
+    if "report_url" not in columns:
+        await conn.execute(text("ALTER TABLE review_tasks ADD COLUMN report_url TEXT"))
 
 
 async def create_task(

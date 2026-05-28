@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./prreview.db"
     cors_origins: str = "http://localhost:3000"
 
+    qiniu_access_key: str = ""
+    qiniu_secret_key: str = ""
+    qiniu_bucket: str = ""
+    qiniu_domain: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

@@ -51,6 +51,10 @@ npm run dev
 | `LLM_BASE_URL` | OpenAI 兼容接口地址，默认 DeepSeek |
 | `LLM_MODEL` | 模型名称 |
 | `GITHUB_TOKEN` | GitHub Token（可选，私有仓库/API 限额） |
+| `QINIU_ACCESS_KEY` | 七牛云 Access Key（可选） |
+| `QINIU_SECRET_KEY` | 七牛云 Secret Key（可选） |
+| `QINIU_BUCKET` | 七牛云存储空间名称（可选） |
+| `QINIU_DOMAIN` | 七牛云 CDN 域名（可选） |
 
 ## 演示 PR 示例
 
@@ -64,9 +68,10 @@ npm run dev
 - [x] MVP：PR 拉取 + LLM 分析 + 流式前端
 - [x] 规则引擎预筛
 - [x] 分析历史
-- [ ] 七牛云 OSS 报告存储
+- [x] 大 PR 分块并行分析
+- [x] Markdown 报告导出
+- [x] 七牛云 OSS 报告存储（可选，配置 QINIU_* 后启用）
 - [ ] GitHub App Webhook 自动 Review
-- [ ] 大 PR 分块并行分析
 
 ## 技术栈
 

@@ -83,6 +83,16 @@ export function ReviewStream({ taskId }: { taskId: string }) {
               下载 Markdown 报告
             </a>
           ) : null}
+          {doneMeta?.report_url ? (
+            <a
+              href={doneMeta.report_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100"
+            >
+              七牛云报告链接
+            </a>
+          ) : null}
           {!done && !error ? (
             <span className="inline-flex items-center gap-2 text-sm text-slate-500">
               <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />

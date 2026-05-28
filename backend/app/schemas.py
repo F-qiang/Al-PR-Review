@@ -61,6 +61,7 @@ class ReviewTaskResponse(BaseModel):
     pr: PullRequestInfo | None = None
     result: ReviewResult | None = None
     error_message: str | None = None
+    report_url: str | None = None
     created_at: datetime
     completed_at: datetime | None = None
 
