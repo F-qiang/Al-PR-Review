@@ -76,7 +76,7 @@ npm run dev
 - [x] 分析历史
 - [x] 大 PR 分块并行分析
 - [x] Markdown 报告导出
-- [x] 七牛云 OSS 报告存储（可选，配置 QINIU_* 后启用）
+- [x] 七牛云对象存储报告保存（可选，配置 QINIU_* 后启用）
 - [x] GitHub Webhook 自动 Review
 
 ## GitHub Webhook 配置
