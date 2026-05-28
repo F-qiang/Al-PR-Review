@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+backend/*.db
+backend/prreview.db
+
+# Node.js
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# 环境变量（保留 .example 示例文件）
+backend/.env
+frontend/.env.local
+.env.local
+
+# IDE / 系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
