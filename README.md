@@ -16,6 +16,8 @@
 ├── backend/          # FastAPI 后端
 ├── frontend/         # Next.js 前端
 ├── docs/             # 架构设计文档
+│   ├── 架构设计.md
+│   └── 演示指南.md   # 比赛演示脚本
 └── 题目.ini
 ```
 
@@ -42,6 +44,8 @@ npm run dev
 ```
 
 浏览器打开 http://localhost:3000
+
+比赛演示流程见 [docs/演示指南.md](docs/演示指南.md)
 
 ## 环境变量
 

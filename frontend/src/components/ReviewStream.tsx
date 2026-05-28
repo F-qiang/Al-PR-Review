@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getReportDownloadUrl, getStreamUrl } from "@/lib/api";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
 import type { DoneEvent, PullRequestInfo, RiskItem, StatusEvent, SuggestionItem } from "@/lib/types";
 
 const severityStyle: Record<string, string> = {
@@ -116,6 +117,14 @@ export function ReviewStream({ taskId }: { taskId: string }) {
         <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-700">
           {error}
         </div>
+      ) : null}
+
+      {!error ? (
+        <AnalysisProgress
+          stage={status?.stage ?? "pending"}
+          done={done}
+          message={status?.message}
+        />
       ) : null}
 
       {prInfo ? (
