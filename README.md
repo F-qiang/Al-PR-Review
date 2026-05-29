@@ -8,7 +8,8 @@
 - AI 生成变更摘要、风险识别、Review 建议
 - 规则引擎预筛（硬编码密钥、SQL 拼接、eval 等）
 - SSE 流式展示分析过程
-- 分析历史记录
+- 分析历史记录（支持分页、状态筛选）
+- 防重复提交（同一 PR 短时间内复用任务）
 
 ## 项目结构
 
@@ -33,6 +34,10 @@ copy .env.example .env
 pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
+
+后端接口文档：
+- Swagger UI: http://127.0.0.1:8000/docs
+- ReDoc: http://127.0.0.1:8000/redoc
 
 ### 2. 前端
 
@@ -78,6 +83,37 @@ npm run dev
 - [x] Markdown 报告导出
 - [x] 七牛云对象存储报告保存（可选，配置 QINIU_* 后启用）
 - [x] GitHub Webhook 自动 Review
+
+## API 调用示例
+
+### 1) 创建评审任务
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/reviews" \
+  -H "Content-Type: application/json" \
+  -d '{"pr_url":"https://github.com/octocat/Hello-World/pull/1"}'
+```
+
+### 2) 查询评审列表（分页 + 状态筛选）
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/reviews?page=1&page_size=20&status=completed"
+```
+
+`status` 可选值：`pending`、`fetching`、`analyzing`、`completed`、`failed`
+
+### 3) 订阅分析流（SSE）
+
+```bash
+curl -N "http://127.0.0.1:8000/api/v1/reviews/{task_id}/stream"
+```
+
+## 测试与质量检查
+
+```bash
+cd backend
+pytest -q
+```
 
 ## GitHub Webhook 配置
 
