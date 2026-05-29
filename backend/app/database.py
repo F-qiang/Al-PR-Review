@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, select, text
+from sqlalchemy import JSON, DateTime, Integer, String, Text, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -81,11 +81,21 @@ async def get_task(session: AsyncSession, task_id: str) -> ReviewTaskModel | Non
     return result.scalar_one_or_none()
 
 
-async def list_tasks(session: AsyncSession, limit: int = 20) -> list[ReviewTaskModel]:
+async def list_tasks(
+    session: AsyncSession,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+) -> tuple[list[ReviewTaskModel], int]:
+    offset = (page - 1) * page_size
+    total = await session.scalar(select(func.count()).select_from(ReviewTaskModel))
     result = await session.execute(
-        select(ReviewTaskModel).order_by(ReviewTaskModel.created_at.desc()).limit(limit)
+        select(ReviewTaskModel)
+        .order_by(ReviewTaskModel.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
     )
-    return list(result.scalars().all())
+    return list(result.scalars().all()), int(total or 0)
 
 
 async def update_task(

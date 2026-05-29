@@ -1,12 +1,28 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CreateReviewRequest(BaseModel):
-    pr_url: str = Field(..., description="GitHub PR URL 或 owner/repo#123")
-    github_token: str | None = None
+    pr_url: str = Field(..., min_length=5, description="GitHub PR URL 或 owner/repo#123")
+    github_token: str | None = Field(default=None, description="可选，临时覆盖服务端 GitHub Token")
+
+    @field_validator("pr_url")
+    @classmethod
+    def validate_pr_url(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("pr_url 不能为空")
+        return value
+
+    @field_validator("github_token")
+    @classmethod
+    def normalize_github_token(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
 
 
 class PullRequestInfo(BaseModel):
@@ -78,6 +94,8 @@ class ReviewListItem(BaseModel):
 class ReviewListResponse(BaseModel):
     items: list[ReviewListItem]
     total: int
+    page: int
+    page_size: int
 
 
 class StreamEvent(BaseModel):

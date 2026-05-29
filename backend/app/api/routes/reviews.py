@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -40,8 +40,12 @@ async def create_review(
 
 
 @router.get("", response_model=ReviewListResponse)
-async def get_review_history(session: AsyncSession = Depends(get_session)) -> ReviewListResponse:
-    tasks = await list_tasks(session)
+async def get_review_history(
+    page: int = Query(default=1, ge=1, description="页码，从 1 开始"),
+    page_size: int = Query(default=20, ge=1, le=100, description="每页数量，最大 100"),
+    session: AsyncSession = Depends(get_session),
+) -> ReviewListResponse:
+    tasks, total = await list_tasks(session, page=page, page_size=page_size)
     items = [
         ReviewListItem(
             task_id=task.id,
@@ -53,7 +57,7 @@ async def get_review_history(session: AsyncSession = Depends(get_session)) -> Re
         )
         for task in tasks
     ]
-    return ReviewListResponse(items=items, total=len(items))
+    return ReviewListResponse(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/{task_id}", response_model=ReviewTaskResponse)
