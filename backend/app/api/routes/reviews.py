@@ -5,7 +5,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.database import SessionLocal, create_task, get_task, list_tasks
+from app.database import SessionLocal, create_task, find_recent_active_task, get_task, list_tasks
 from app.schemas import CreateReviewRequest, PullRequestInfo, ReviewListItem, ReviewListResponse, ReviewResult, ReviewTaskResponse
 from app.services.analyzer import stream_events, task_to_response
 from app.services.pr_parser import parse_pr_url
@@ -28,6 +28,15 @@ async def create_review(
         parsed = parse_pr_url(body.pr_url)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    existing = await find_recent_active_task(
+        session,
+        owner=parsed.owner,
+        repo=parsed.repo,
+        number=parsed.number,
+    )
+    if existing:
+        return task_to_response(existing)
 
     task = await create_task(
         session,

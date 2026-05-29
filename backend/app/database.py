@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, func, select, text
+from sqlalchemy import JSON, DateTime, Integer, String, Text, and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -50,6 +50,31 @@ async def _migrate_schema(conn) -> None:
         await conn.execute(text("ALTER TABLE review_tasks ADD COLUMN github_token TEXT"))
     if "report_url" not in columns:
         await conn.execute(text("ALTER TABLE review_tasks ADD COLUMN report_url TEXT"))
+
+
+async def find_recent_active_task(
+    session: AsyncSession,
+    *,
+    owner: str,
+    repo: str,
+    number: int,
+    within_seconds: int = 180,
+) -> ReviewTaskModel | None:
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=within_seconds)
+    result = await session.execute(
+        select(ReviewTaskModel)
+        .where(
+            and_(
+                ReviewTaskModel.repo_owner == owner,
+                ReviewTaskModel.repo_name == repo,
+                ReviewTaskModel.pr_number == number,
+                or_(ReviewTaskModel.status.in_(["pending", "fetching", "analyzing"]), ReviewTaskModel.created_at >= cutoff),
+            )
+        )
+        .order_by(ReviewTaskModel.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def create_task(
