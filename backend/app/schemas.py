@@ -96,6 +96,8 @@ class ReviewListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    total_pages: int
+    status: str | None = None
 
 
 class StreamEvent(BaseModel):

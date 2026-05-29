@@ -86,14 +86,19 @@ async def list_tasks(
     *,
     page: int = 1,
     page_size: int = 20,
+    status: str | None = None,
 ) -> tuple[list[ReviewTaskModel], int]:
     offset = (page - 1) * page_size
-    total = await session.scalar(select(func.count()).select_from(ReviewTaskModel))
+    base_query = select(ReviewTaskModel)
+    total_query = select(func.count()).select_from(ReviewTaskModel)
+
+    if status:
+        base_query = base_query.where(ReviewTaskModel.status == status)
+        total_query = total_query.where(ReviewTaskModel.status == status)
+
+    total = await session.scalar(total_query)
     result = await session.execute(
-        select(ReviewTaskModel)
-        .order_by(ReviewTaskModel.created_at.desc())
-        .offset(offset)
-        .limit(page_size)
+        base_query.order_by(ReviewTaskModel.created_at.desc()).offset(offset).limit(page_size)
     )
     return list(result.scalars().all()), int(total or 0)
 

@@ -1,3 +1,5 @@
+from math import ceil
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,9 +45,11 @@ async def create_review(
 async def get_review_history(
     page: int = Query(default=1, ge=1, description="页码，从 1 开始"),
     page_size: int = Query(default=20, ge=1, le=100, description="每页数量，最大 100"),
+    status: str | None = Query(default=None, description="按状态筛选，如 pending/running/success/failed"),
     session: AsyncSession = Depends(get_session),
 ) -> ReviewListResponse:
-    tasks, total = await list_tasks(session, page=page, page_size=page_size)
+    status = status.strip() if status else None
+    tasks, total = await list_tasks(session, page=page, page_size=page_size, status=status)
     items = [
         ReviewListItem(
             task_id=task.id,
@@ -57,7 +61,15 @@ async def get_review_history(
         )
         for task in tasks
     ]
-    return ReviewListResponse(items=items, total=total, page=page, page_size=page_size)
+    total_pages = ceil(total / page_size) if total > 0 else 0
+    return ReviewListResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        status=status,
+    )
 
 
 @router.get("/{task_id}", response_model=ReviewTaskResponse)
