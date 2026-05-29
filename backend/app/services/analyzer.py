@@ -17,12 +17,13 @@ from app.services.report import render_markdown_report, render_pr_comment
 from app.services.rules import merge_risks, scan_file_with_rules
 
 
-def task_to_response(task) -> ReviewTaskResponse:
+def task_to_response(task, *, reused: bool = False) -> ReviewTaskResponse:
     pr = PullRequestInfo(**task.pr_payload) if task.pr_payload else None
     result = ReviewResult(**task.result_payload) if task.result_payload else None
     return ReviewTaskResponse(
         task_id=task.id,
         status=task.status,
+        reused=reused,
         pr=pr,
         result=result,
         error_message=task.error_message,

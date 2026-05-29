@@ -6,7 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import SessionLocal, create_task, find_recent_active_task, get_task, list_tasks
-from app.schemas import CreateReviewRequest, PullRequestInfo, ReviewListItem, ReviewListResponse, ReviewResult, ReviewTaskResponse
+from app.schemas import (
+    CreateReviewRequest,
+    PullRequestInfo,
+    ReviewListItem,
+    ReviewListResponse,
+    ReviewListStatus,
+    ReviewResult,
+    ReviewTaskResponse,
+)
 from app.services.analyzer import stream_events, task_to_response
 from app.services.pr_parser import parse_pr_url
 from app.services.report import render_markdown_report
@@ -36,7 +44,7 @@ async def create_review(
         number=parsed.number,
     )
     if existing:
-        return task_to_response(existing)
+        return task_to_response(existing, reused=True)
 
     task = await create_task(
         session,
@@ -54,7 +62,7 @@ async def create_review(
 async def get_review_history(
     page: int = Query(default=1, ge=1, description="页码，从 1 开始"),
     page_size: int = Query(default=20, ge=1, le=100, description="每页数量，最大 100"),
-    status: str | None = Query(default=None, description="按状态筛选，如 pending/running/success/failed"),
+    status: ReviewListStatus | None = Query(default=None, description="按状态筛选：pending/fetching/analyzing/completed/failed"),
     session: AsyncSession = Depends(get_session),
 ) -> ReviewListResponse:
     status = status.strip() if status else None

@@ -71,9 +71,14 @@ class ReviewResult(BaseModel):
     duration_ms: int | None = None
 
 
+ReviewTaskStatus = Literal["pending", "fetching", "analyzing", "completed", "failed"]
+ReviewListStatus = Literal["pending", "fetching", "analyzing", "completed", "failed"]
+
+
 class ReviewTaskResponse(BaseModel):
     task_id: str
-    status: str
+    status: ReviewTaskStatus
+    reused: bool = False
     pr: PullRequestInfo | None = None
     result: ReviewResult | None = None
     error_message: str | None = None
@@ -97,7 +102,7 @@ class ReviewListResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
-    status: str | None = None
+    status: ReviewListStatus | None = None
 
 
 class StreamEvent(BaseModel):
