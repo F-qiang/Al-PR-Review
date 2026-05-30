@@ -1,11 +1,14 @@
 from math import ceil
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
+
+from app.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import SessionLocal, create_task, find_recent_active_task, get_task, list_tasks
+from app.errors import BAD_REQUEST, NOT_FOUND, api_error
 from app.schemas import (
     CreateReviewRequest,
     PullRequestInfo,
@@ -35,13 +38,14 @@ async def create_review(
     try:
         parsed = parse_pr_url(body.pr_url)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise api_error(400, BAD_REQUEST, str(exc)) from exc
 
     existing = await find_recent_active_task(
         session,
         owner=parsed.owner,
         repo=parsed.repo,
         number=parsed.number,
+        within_seconds=settings.review_idempotency_window_seconds,
     )
     if existing:
         return task_to_response(existing, reused=True)
@@ -93,7 +97,7 @@ async def get_review_history(
 async def get_review(task_id: str, session: AsyncSession = Depends(get_session)) -> ReviewTaskResponse:
     task = await get_task(session, task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise api_error(404, NOT_FOUND, "任务不存在")
     return task_to_response(task)
 
 
@@ -101,9 +105,9 @@ async def get_review(task_id: str, session: AsyncSession = Depends(get_session))
 async def download_report(task_id: str, session: AsyncSession = Depends(get_session)) -> PlainTextResponse:
     task = await get_task(session, task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise api_error(404, NOT_FOUND, "任务不存在")
     if not task.result_payload or not task.pr_payload:
-        raise HTTPException(status_code=404, detail="报告尚未生成")
+        raise api_error(404, NOT_FOUND, "报告尚未生成")
 
     markdown = render_markdown_report(
         PullRequestInfo(**task.pr_payload),

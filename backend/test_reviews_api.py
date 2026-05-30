@@ -32,8 +32,8 @@ def test_create_review_reuse_existing_task(monkeypatch) -> None:
         _ = pr_url
         return parsed
 
-    async def fake_find_recent_active_task(session, *, owner: str, repo: str, number: int):
-        _ = (session, owner, repo, number)
+    async def fake_find_recent_active_task(session, *, owner: str, repo: str, number: int, within_seconds: int):
+        _ = (session, owner, repo, number, within_seconds)
         return task
 
     async def fake_create_task(*args, **kwargs):
