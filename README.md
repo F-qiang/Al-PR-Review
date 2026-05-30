@@ -50,6 +50,20 @@ npm run dev
 
 浏览器打开 http://localhost:3000
 
+### 3. 一键启动脚本（Windows PowerShell）
+
+已提供演示启动脚本：
+
+```powershell
+.\scripts\start_backend.ps1
+```
+
+另开一个 PowerShell：
+
+```powershell
+.\scripts\start_frontend.ps1
+```
+
 比赛演示流程见 [docs/演示指南.md](docs/演示指南.md)
 
 ## 环境变量
@@ -71,8 +85,10 @@ npm run dev
 
 公开 PR 可直接分析，例如：
 
-- `https://github.com/python/cpython/pull/1`（示例格式）
+- `https://github.com/python/cpython/pull/1`（已验证可用于演示）
 - 或任意公开仓库的 PR 链接
+
+演示成功标志：页面状态变为“已完成”，并展示 PR 信息、变更摘要、风险建议和 Markdown 报告下载按钮。
 
 ## 开发进度
 
