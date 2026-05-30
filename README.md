@@ -80,6 +80,7 @@ npm run dev
 | `QINIU_SECRET_KEY` | 七牛云 Secret Key（可选） |
 | `QINIU_BUCKET` | 七牛云存储空间名称（可选） |
 | `QINIU_DOMAIN` | 七牛云 CDN 域名（可选） |
+| `DATABASE_URL` | SQLite 数据库连接地址，推荐固定使用 `backend/prreview.db` |
 
 ## 演示 PR 示例
 
