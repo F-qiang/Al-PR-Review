@@ -32,6 +32,11 @@ class ReviewTaskModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    __table_args__ = (
+        Index("idx_review_tasks_repo_pr_created", "repo_owner", "repo_name", "pr_number", "created_at"),
+        Index("idx_review_tasks_status_created", "status", "created_at"),
+    )
+
 
 engine = create_async_engine(settings.database_url, echo=False)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -50,6 +55,19 @@ async def _migrate_schema(conn) -> None:
         await conn.execute(text("ALTER TABLE review_tasks ADD COLUMN github_token TEXT"))
     if "report_url" not in columns:
         await conn.execute(text("ALTER TABLE review_tasks ADD COLUMN report_url TEXT"))
+
+    await conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS idx_review_tasks_repo_pr_created "
+            "ON review_tasks (repo_owner, repo_name, pr_number, created_at)"
+        )
+    )
+    await conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS idx_review_tasks_status_created "
+            "ON review_tasks (status, created_at)"
+        )
+    )
 
 
 async def find_recent_active_task(
@@ -121,10 +139,9 @@ async def list_tasks(
         base_query = base_query.where(ReviewTaskModel.status == status)
         total_query = total_query.where(ReviewTaskModel.status == status)
 
+    order_by_created_desc = ReviewTaskModel.created_at.desc()
     total = await session.scalar(total_query)
-    result = await session.execute(
-        base_query.order_by(ReviewTaskModel.created_at.desc()).offset(offset).limit(page_size)
-    )
+    result = await session.execute(base_query.order_by(order_by_created_desc).offset(offset).limit(page_size))
     return list(result.scalars().all()), int(total or 0)
 
 
