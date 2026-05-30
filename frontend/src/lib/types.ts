@@ -36,9 +36,12 @@ export interface ReviewResult {
   duration_ms?: number | null;
 }
 
+export type ReviewTaskStatus = "pending" | "fetching" | "analyzing" | "completed" | "failed";
+
 export interface ReviewTask {
   task_id: string;
-  status: string;
+  status: ReviewTaskStatus;
+  reused: boolean;
   pr: PullRequestInfo | null;
   result: ReviewResult | null;
   error_message: string | null;
@@ -49,11 +52,20 @@ export interface ReviewTask {
 
 export interface ReviewListItem {
   task_id: string;
-  status: string;
+  status: ReviewTaskStatus;
   pr_url: string;
   pr_title: string | null;
   created_at: string;
   completed_at: string | null;
+}
+
+export interface ReviewListResponse {
+  items: ReviewListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  status: ReviewTaskStatus | null;
 }
 
 export interface StatusEvent {

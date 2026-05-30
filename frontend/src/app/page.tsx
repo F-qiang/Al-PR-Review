@@ -1,15 +1,23 @@
 import { ReviewForm } from "@/components/ReviewForm";
 import { HistoryList } from "@/components/HistoryList";
 import { listReviews } from "@/lib/api";
-import type { ReviewListItem } from "@/lib/types";
+import type { ReviewListResponse } from "@/lib/types";
 
-export default async function HomePage() {
-  let history: { items: ReviewListItem[]; total: number } = { items: [], total: 0 };
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; status?: string }>;
+}) {
+  const query = await searchParams;
+  const page = Math.max(Number(query.page ?? "1") || 1, 1);
+  const status = query.status as ReviewListResponse["status"];
+  const normalizedStatus = status || null;
+  let history: ReviewListResponse = { items: [], total: 0, page, page_size: 20, total_pages: 0, status: normalizedStatus };
 
   try {
-    history = await listReviews();
+    history = await listReviews({ page, pageSize: 20, status: normalizedStatus ?? undefined });
   } catch {
-    history = { items: [], total: 0 };
+    history = { items: [], total: 0, page, page_size: 20, total_pages: 0, status: normalizedStatus };
   }
 
   return (
@@ -35,7 +43,12 @@ export default async function HomePage() {
 
           <section>
             <h2 className="mb-4 text-xl font-semibold text-slate-900">最近记录</h2>
-            <HistoryList items={history.items} />
+            <HistoryList
+              items={history.items}
+              page={history.page}
+              totalPages={history.total_pages}
+              status={history.status}
+            />
           </section>
         </div>
       </div>

@@ -18,7 +18,8 @@ export function ReviewForm() {
 
     try {
       const task = await createReview(prUrl.trim(), githubToken.trim() || undefined);
-      router.push(`/review/${task.task_id}`);
+      const reusedQuery = task.reused ? "?reused=1" : "";
+      router.push(`/review/${task.task_id}${reusedQuery}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "提交失败");
     } finally {

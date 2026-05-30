@@ -1,4 +1,4 @@
-import type { ReviewListItem, ReviewTask } from "./types";
+import type { ReviewListResponse, ReviewTask, ReviewTaskStatus } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
@@ -29,8 +29,18 @@ export async function getReview(taskId: string): Promise<ReviewTask> {
   return response.json();
 }
 
-export async function listReviews(): Promise<{ items: ReviewListItem[]; total: number }> {
-  const response = await fetch(`${API_BASE}/api/v1/reviews`, { cache: "no-store" });
+export async function listReviews(params?: {
+  page?: number;
+  pageSize?: number;
+  status?: ReviewTaskStatus;
+}): Promise<ReviewListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.pageSize) searchParams.set("page_size", String(params.pageSize));
+  if (params?.status) searchParams.set("status", params.status);
+
+  const query = searchParams.toString();
+  const response = await fetch(`${API_BASE}/api/v1/reviews${query ? `?${query}` : ""}`, { cache: "no-store" });
   if (!response.ok) {
     throw new Error("获取历史记录失败");
   }
