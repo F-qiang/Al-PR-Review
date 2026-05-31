@@ -89,6 +89,11 @@ npm run dev
 - `https://github.com/python/cpython/pull/1`（已验证可用于演示）
 - 或任意公开仓库的 PR 链接
 
+演示模式说明：
+- 可在 `backend/.env` 中设置 `DEMO_MODE=true`
+- 启用后后端会返回固定示例结果，适合网络不稳定或现场演示
+- 任务详情页会显示明显的“演示模式”提示
+
 演示成功标志：页面状态变为“已完成”，并展示 PR 信息、变更摘要、风险建议和 Markdown 报告下载按钮。
 
 ## 开发进度
