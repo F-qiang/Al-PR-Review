@@ -55,6 +55,61 @@ async def _upload_report_if_configured(
     return await upload_report(object_key, markdown)
 
 
+async def _emit_demo_result(task_id: str, task_pr_url: str) -> None:
+    parsed = parse_pr_url(task_pr_url)
+    pr_info = PullRequestInfo(
+        owner=parsed.owner,
+        repo=parsed.repo,
+        number=parsed.number,
+        title="[演示模式] 示例 PR 评审结果",
+        author="demo-bot",
+        body="演示模式下的固定 PR 数据，用于稳定展示 UI 与流程。",
+        url=task_pr_url,
+        additions=12,
+        deletions=4,
+        changed_files=3,
+    )
+    result = ReviewResult(
+        summary="这是演示模式返回的模拟评审结果，用于在网络不稳定或无 GitHub/LLM 资源时稳定展示项目流程。",
+        risks=[],
+        suggestions=[
+            {
+                "category": "demo",
+                "content": "演示模式已启用，后续可切换回真实分析流程。",
+                "priority": "low",
+            }
+        ],
+        model_name="demo-mode",
+        token_used=0,
+        duration_ms=1200,
+    )
+    # 兼容 pydantic 模型
+    result = ReviewResult.model_validate(result.model_dump())
+
+    send(task_id, "status", {"stage": "demo", "message": "当前处于演示模式，返回固定评审结果..."})
+    send(task_id, "pr_info", pr_info.model_dump())
+    send(task_id, "summary", {"content": result.summary})
+    for suggestion in result.suggestions:
+        send(task_id, "suggestion", suggestion.model_dump())
+
+    send(
+        task_id,
+        "done",
+        {
+            "task_id": task_id,
+            "duration_ms": result.duration_ms,
+            "risk_count": len(result.risks),
+            "suggestion_count": len(result.suggestions),
+            "report_url": None,
+            "comment_url": None,
+            "chunk_count": 1,
+            "model_name": result.model_name,
+            "reused": False,
+            "demo_mode": True,
+        },
+    )
+
+
 async def run_review_analysis(
     task_id: str,
     pr_url: str,
@@ -66,6 +121,10 @@ async def run_review_analysis(
     started = time.perf_counter()
 
     try:
+        if settings.demo_mode:
+            await _emit_demo_result(task_id, pr_url)
+            return
+
         async with SessionLocal() as session:
             task = await get_task(session, task_id)
             if not task:
@@ -184,6 +243,7 @@ async def run_review_analysis(
                     "chunk_count": chunk_count,
                     "model_name": llm_result.model_name,
                     "reused": False,
+                    "demo_mode": False,
                 },
             )
     except (GitHubError, LLMError, ValueError) as exc:
@@ -249,6 +309,7 @@ async def stream_events(task_id: str) -> AsyncIterator[dict[str, str]]:
                         "duration_ms": result.duration_ms,
                         "model_name": result.model_name,
                         "reused": True,
+                        "demo_mode": settings.demo_mode,
                     },
                     ensure_ascii=False,
                 ),
