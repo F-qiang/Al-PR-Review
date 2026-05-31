@@ -64,6 +64,14 @@ npm install
 npm run dev
 ```
 
+前端环境变量示例中还支持：
+
+```text
+NEXT_PUBLIC_DEMO_MODE=false
+```
+
+如果后端已开启 `DEMO_MODE=true`，前端会自动在结果页显示演示模式提示。
+
 浏览器打开 http://localhost:3000
 
 ### 3. 一键启动脚本（Windows PowerShell）
