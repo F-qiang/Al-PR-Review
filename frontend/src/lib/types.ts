@@ -84,4 +84,6 @@ export interface DoneEvent {
   comment_url?: string | null;
   chunk_count?: number;
   cached?: boolean;
+  model_name?: string;
+  reused?: boolean;
 }

@@ -182,6 +182,8 @@ async def run_review_analysis(
                     "report_url": report_url,
                     "comment_url": comment_url,
                     "chunk_count": chunk_count,
+                    "model_name": llm_result.model_name,
+                    "reused": False,
                 },
             )
     except (GitHubError, LLMError, ValueError) as exc:
@@ -245,6 +247,8 @@ async def stream_events(task_id: str) -> AsyncIterator[dict[str, str]]:
                         "cached": True,
                         "report_url": task.report_url,
                         "duration_ms": result.duration_ms,
+                        "model_name": result.model_name,
+                        "reused": True,
                     },
                     ensure_ascii=False,
                 ),

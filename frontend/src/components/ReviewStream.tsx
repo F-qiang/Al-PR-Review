@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getReportDownloadUrl, getStreamUrl } from "@/lib/api";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
 import type { DoneEvent, PullRequestInfo, RiskItem, StatusEvent, SuggestionItem } from "@/lib/types";
@@ -14,6 +15,7 @@ const severityStyle: Record<string, string> = {
 };
 
 export function ReviewStream({ taskId }: { taskId: string }) {
+  const router = useRouter();
   const [status, setStatus] = useState<StatusEvent | null>({
     stage: "pending",
     message: "连接分析服务...",
@@ -115,7 +117,16 @@ export function ReviewStream({ taskId }: { taskId: string }) {
 
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-700">
-          {error}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
+            >
+              重试
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -147,6 +158,30 @@ export function ReviewStream({ taskId }: { taskId: string }) {
             >
               在 GitHub 查看 →
             </a>
+          </div>
+        </section>
+      ) : null}
+
+      {doneMeta ? (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">风险数量</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">{risks.length}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">建议数量</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">{suggestions.length}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">耗时</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">
+              {doneMeta.duration_ms ? `${(doneMeta.duration_ms / 1000).toFixed(1)}s` : "-"}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">模型</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">{doneMeta.model_name ?? "-"}</p>
+            <p className="mt-1 text-sm text-slate-500">{doneMeta.reused ? "复用任务" : "新建任务"}</p>
           </div>
         </section>
       ) : null}

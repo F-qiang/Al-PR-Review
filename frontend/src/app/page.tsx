@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ReviewForm } from "@/components/ReviewForm";
 import { HistoryList } from "@/components/HistoryList";
 import { listReviews } from "@/lib/api";
@@ -42,12 +44,15 @@ export default async function HomePage({
           </section>
 
           <section>
-            <h2 className="mb-4 text-xl font-semibold text-slate-900">最近记录</h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-slate-900">最近记录</h2>
+            </div>
             <HistoryList
               items={history.items}
               page={history.page}
               totalPages={history.total_pages}
               status={history.status}
+              onRefresh={() => window.location.reload()}
             />
           </section>
         </div>

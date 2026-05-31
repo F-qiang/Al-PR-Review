@@ -14,11 +14,13 @@ export function HistoryList({
   page,
   totalPages,
   status,
+  onRefresh,
 }: {
   items: ReviewListItem[];
   page: number;
   totalPages: number;
   status: string | null;
+  onRefresh: () => void;
 }) {
   const statusOptions = [
     { value: "", label: "全部" },
@@ -40,6 +42,40 @@ export function HistoryList({
   if (items.length === 0) {
     return (
       <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {statusOptions.map((option) => (
+              <Link
+                key={option.value || "all"}
+                href={buildHref(1, option.value || null)}
+                className={`rounded-full px-3 py-1 text-xs transition ${
+                  (status ?? "") === option.value
+                    ? "bg-indigo-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {option.label}
+              </Link>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50"
+          >
+            刷新历史记录
+          </button>
+        </div>
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
+          暂无分析记录，提交第一个 PR 开始体验
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {statusOptions.map((option) => (
             <Link
@@ -55,29 +91,13 @@ export function HistoryList({
             </Link>
           ))}
         </div>
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
-          暂无分析记录，提交第一个 PR 开始体验
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {statusOptions.map((option) => (
-          <Link
-            key={option.value || "all"}
-            href={buildHref(1, option.value || null)}
-            className={`rounded-full px-3 py-1 text-xs transition ${
-              (status ?? "") === option.value
-                ? "bg-indigo-600 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            {option.label}
-          </Link>
-        ))}
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50"
+        >
+          刷新历史记录
+        </button>
       </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <ul className="divide-y divide-slate-100">
