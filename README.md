@@ -1,15 +1,30 @@
 # AI PR Review 助手
 
-基于 GitHub Pull Request 与 LLM 的智能代码评审工具，适用于七牛云比赛项目。
+基于 GitHub Pull Request 与大模型的智能代码评审工具。支持输入 PR 链接后自动拉取代码变更，生成变更摘要、风险识别、Review 建议，并输出 Markdown 报告；同时支持历史记录分页、状态筛选、Webhook 自动触发、PR 自动评论、七牛云报告上传，以及演示模式兜底。
 
-## 功能
+## 核心功能
 
 - 输入 GitHub PR 链接，自动拉取变更
 - AI 生成变更摘要、风险识别、Review 建议
-- 规则引擎预筛（硬编码密钥、SQL 拼接、eval 等）
+- 规则引擎预筛：硬编码密钥、SQL 拼接、`eval` 等常见风险
 - SSE 流式展示分析过程
-- 分析历史记录（支持分页、状态筛选）
-- 防重复提交（同一 PR 短时间内复用任务）
+- 分析历史记录分页与状态筛选
+- 同一 PR 幂等保护，避免重复创建任务
+- Webhook 自动创建分析任务
+- 分析完成后自动评论 PR
+- Markdown 报告导出
+- 七牛云对象存储报告上传
+- 统一错误响应
+- 数据库索引优化
+- 演示模式支持固定示例结果
+- 失败重试与任务复用提示
+
+## 技术栈
+
+- 后端：FastAPI、SQLAlchemy、SQLite、SSE
+- 前端：Next.js 16、TypeScript、Tailwind CSS
+- AI：OpenAI 兼容接口
+- 自动化：GitHub Actions、PowerShell 脚本
 
 ## 项目结构
 
@@ -18,7 +33,8 @@
 ├── frontend/         # Next.js 前端
 ├── docs/             # 架构设计文档
 │   ├── 架构设计.md
-│   └── 演示指南.md   # 比赛演示脚本
+│   ├── 演示指南.md   # 比赛演示脚本
+│   └── 测试清单.md   # 项目测试清单
 └── 题目.ini
 ```
 
@@ -26,7 +42,7 @@
 
 ### 1. 后端
 
-```bash
+```powershell
 cd backend
 copy .env.example .env
 # 编辑 .env，填入 LLM_API_KEY
@@ -41,7 +57,7 @@ python -m uvicorn app.main:app --reload --port 8000
 
 ### 2. 前端
 
-```bash
+```powershell
 cd frontend
 copy .env.local.example .env.local
 npm install
@@ -76,6 +92,7 @@ npm run dev
 | `GITHUB_TOKEN` | GitHub Token（可选，私有仓库/API 限额） |
 | `GITHUB_WEBHOOK_SECRET` | Webhook 签名密钥（可选） |
 | `GITHUB_AUTO_COMMENT` | 分析完成后自动回评 PR，默认 `true` |
+| `DEMO_MODE` | 演示模式开关，`true` 时返回固定示例结果 |
 | `QINIU_ACCESS_KEY` | 七牛云 Access Key（可选） |
 | `QINIU_SECRET_KEY` | 七牛云 Secret Key（可选） |
 | `QINIU_BUCKET` | 七牛云存储空间名称（可选） |
