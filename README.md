@@ -1,6 +1,7 @@
 # AI PR Review 助手
 演示视频：
 【屏幕录制 2026-05-31 235919】 https://www.bilibili.com/video/BV1aTVQ6iEZg/?share_source=copy_web&vd_source=2e377d3d15da0f86a7287cd8bb4aa1c3
+白天兼职每次只有晚上有空制作时间不足超时了几分钟提交很抱歉。
 基于 GitHub Pull Request 与大模型的智能代码评审工具。支持输入 PR 链接后自动拉取代码变更，生成变更摘要、风险识别、Review 建议，并输出 Markdown 报告；同时支持历史记录分页、状态筛选、Webhook 自动触发、PR 自动评论、七牛云报告上传，以及演示模式兜底。
 
 ## 核心功能
